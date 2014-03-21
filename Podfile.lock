@@ -1,0 +1,34 @@
+PODS:
+  - CocoaLumberjack (1.8.1):
+    - CocoaLumberjack/Extensions
+  - CocoaLumberjack/Core (1.8.1)
+  - CocoaLumberjack/Extensions (1.8.1):
+    - CocoaLumberjack/Core
+  - FMDB/common (2.2)
+  - FMDB/SQLCipher (2.2):
+    - FMDB/common
+    - SQLCipher
+  - Kiwi/ARC (2.2.4)
+  - Kiwi/NonARC (2.2.4)
+  - Kiwi/XCTest (2.2.4):
+    - Kiwi/ARC
+    - Kiwi/NonARC
+  - SQLCipher (3.0.1):
+    - SQLCipher/standard
+  - SQLCipher/standard (3.0.1)
+  - ZauberCommons (0.1.0)
+
+DEPENDENCIES:
+  - CocoaLumberjack (~> 1.6)
+  - FMDB/SQLCipher (= 2.2)
+  - Kiwi/XCTest (~> 2.2.3)
+  - ZauberCommons (= 0.1.0)
+
+SPEC CHECKSUMS:
+  CocoaLumberjack: 020378ec400d658923bf5887178394f65f052c90
+  FMDB: 97472cfacf0d9e445e915704fb43b4b142799c36
+  Kiwi: d60d7498b640a16f58b01925fc3c8d7c4d809f66
+  SQLCipher: 006f125d9b85e32ee6242b41adb68f0f5cbc4aa9
+  ZauberCommons: bbda2befb5ccecaee4771fbe29a3d942111e516c
+
+COCOAPODS: 0.29.0
