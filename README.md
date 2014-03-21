@@ -47,3 +47,19 @@ There is a sample app that displays a list of Collection entities, that supports
 
 Tapping on a Collection will push a new list with its child Members, supporting member creation and deletion.
 
+Conclusions and Remarks
+=======================
+
+The current state of this project complies with the objectives.
+
+FCModel is a young project, it is changing fast, but seems to be just starting.
+
+FCModel raises exceptions when it encounters an unexpected state, which has to be dealt with appropriately.
+
+### Additional Remarks: March 21, 2014:
+
+FCModel offers nothing in the way of having the operations run outside the main queue. An additional layer has to be added on top of it.
+
+FCModel doesn't include any object graph (relationships) management. It has to be implemented explicitly in each model.
+
+Branching the FCModel to use FMDB/SQLCipher is not hard, but the details are likely to change in the near future as new library versions get released.
