@@ -36,7 +36,9 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 @property (readonly) BOOL existsInDatabase;
 @property (readonly) NSError *lastSQLiteError;
 
+// Throws if the key is wrong
 + (void)openDatabaseAtPath:(NSString *)path key:(NSString *)key withSchemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder;
+// Throws if the key is wrong
 + (void)openDatabaseAtPath:(NSString *)path key:(NSString *)key withDatabaseInitializer:(void (^)(FMDatabase *db))databaseInitializer schemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder;
 
 // Feel free to operate on the same database queue with your own queries (IMPORTANT: READ THE NEXT METHOD DEFINITION)

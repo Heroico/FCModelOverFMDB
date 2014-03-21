@@ -11,6 +11,8 @@
 @class ZHFCollection;
 
 @interface ZHFMember : FCModel
+
+// Such a method should belong in ZHFCollection
 + (id)newWithParentCollection:(ZHFCollection *)collection;
 
 // table
