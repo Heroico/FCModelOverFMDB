@@ -1,14 +1,13 @@
 //
-//  ZHFFMDBQueue.m
+//  ZHFMember.h
 //  FMDBTest
 //
 //  Created by Alvaro Barbeira on 3/21/14.
 //  Copyright (c) 2014 Zauber. All rights reserved.
 //
 
-#import "ZHFFMDBQueue.h"
+#import "FCModel.h"
 
-@implementation ZHFFMDBQueue
-
+@interface ZHFMember : FCModel
 
 @end

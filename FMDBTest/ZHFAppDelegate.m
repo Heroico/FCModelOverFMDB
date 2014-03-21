@@ -9,6 +9,8 @@
 #import "ZHFAppDelegate.h"
 #import <CocoaLumberjack/DDASLLogger.h>
 #import <CocoaLumberjack/DDTTYLogger.h>
+#import "FCModel.h"
+#import "ZHFFileManager.h"
 
 @implementation ZHFAppDelegate
 
@@ -16,6 +18,58 @@
 {
     [DDLog addLogger:[DDASLLogger sharedInstance]];
     [DDLog addLogger:[DDTTYLogger sharedInstance]];
+    
+    ZHFFileManager *fileManager = [ZHFFileManager newManager];
+    //hack
+    if (![fileManager itemExistsAtManagedPath:@"test"]) {
+        [fileManager createDirectoryAtPath:@"test"];
+    }
+    
+    NSString *dbPath = [fileManager pathForFilename:@"db" atPath:@"test"];
+    [FCModel openDatabaseAtPath:dbPath key:@"secret" withSchemaBuilder:^(FMDatabase *db, int *schemaVersion) {
+
+        db.traceExecution = YES; // Log every query (useful to learn what FCModel is doing or analyze performance)
+        [db beginTransaction];
+        
+        void (^failedAt)(int statement) = ^(int statement){
+            int lastErrorCode = db.lastErrorCode;
+            NSString *lastErrorMessage = db.lastErrorMessage;
+            [db rollback];
+            NSAssert3(0, @"Migration statement %d failed, code %d: %@", statement, lastErrorCode, lastErrorMessage);
+        };
+        
+        if (*schemaVersion < 1) {
+            if (! [db executeUpdate:
+                   @"CREATE TABLE ZHFCollection ("
+                   @"    id           INTEGER PRIMARY KEY AUTOINCREMENT," // Autoincrement is optional. Just demonstrating that it works.
+                   @"    name         TEXT NOT NULL"
+                   @");"
+                   ]) failedAt(1);
+            
+            if (! [db executeUpdate:
+                   @"CREATE TABLE ZHFMember ("
+                   @"    id           INTEGER PRIMARY KEY AUTOINCREMENT,"
+                   @"    name         TEXT NOT NULL,"
+                   @"    parent_id    INTEGER NOT NULL,"
+                   @"    FOREIGN KEY(parent_id) REFERENCES Collection(id)"
+                   @");"
+                   ]) failedAt(2);
+            
+            // Create any other tables...
+            
+            *schemaVersion = 1;
+        }
+        
+        // If you wanted to change the schema in a later app version, you'd add something like this here:
+        /*
+         if (*schemaVersion < 2) {
+         if (! [db executeUpdate:@"ALTER TABLE Person ADD COLUMN lastModified INTEGER NULL"]) failedAt(3);
+         *schemaVersion = 2;
+         }
+         */
+        
+        [db commit];
+    }];
     return YES;
 }
 							

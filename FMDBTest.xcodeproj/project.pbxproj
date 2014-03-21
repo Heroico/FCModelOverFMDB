@@ -22,8 +22,12 @@
 		3885A22B18DC81E40073D002 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 3885A22918DC81E40073D002 /* InfoPlist.strings */; };
 		3885A22D18DC81E40073D002 /* FMDBTestTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 3885A22C18DC81E40073D002 /* FMDBTestTests.m */; };
 		3885A23C18DC8D8A0073D002 /* ZHFFileManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 3885A23B18DC8D8A0073D002 /* ZHFFileManager.m */; };
-		3885A24318DC8EAB0073D002 /* ZHFModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 3885A24218DC8EAB0073D002 /* ZHFModel.m */; };
+		3885A24318DC8EAB0073D002 /* ZHFCollection.m in Sources */ = {isa = PBXBuildFile; fileRef = 3885A24218DC8EAB0073D002 /* ZHFCollection.m */; };
 		3885A24718DC91690073D002 /* ZHFFMDBQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = 3885A24618DC91690073D002 /* ZHFFMDBQueue.m */; };
+		3885A25A18DC9E8F0073D002 /* FCModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 3885A25518DC9E8F0073D002 /* FCModel.m */; };
+		3885A25B18DC9E8F0073D002 /* FCModelCachedObject.m in Sources */ = {isa = PBXBuildFile; fileRef = 3885A25718DC9E8F0073D002 /* FCModelCachedObject.m */; };
+		3885A25C18DC9E8F0073D002 /* FCModelDatabaseQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = 3885A25918DC9E8F0073D002 /* FCModelDatabaseQueue.m */; };
+		3885A25F18DCAA780073D002 /* ZHFMember.m in Sources */ = {isa = PBXBuildFile; fileRef = 3885A25E18DCAA780073D002 /* ZHFMember.m */; };
 		68DA3A80EF90418FAA0727A1 /* libPods.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5E40ACC83C7845119F3752AF /* libPods.a */; };
 		8864595542544FAB86DFB1D0 /* libPods-test.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D9C54DD1CD6744A59A9508DF /* libPods-test.a */; };
 /* End PBXBuildFile section */
@@ -61,10 +65,18 @@
 		3885A22C18DC81E40073D002 /* FMDBTestTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FMDBTestTests.m; sourceTree = "<group>"; };
 		3885A23A18DC8D8A0073D002 /* ZHFFileManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ZHFFileManager.h; sourceTree = "<group>"; };
 		3885A23B18DC8D8A0073D002 /* ZHFFileManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ZHFFileManager.m; sourceTree = "<group>"; };
-		3885A24118DC8EAB0073D002 /* ZHFModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ZHFModel.h; sourceTree = "<group>"; };
-		3885A24218DC8EAB0073D002 /* ZHFModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ZHFModel.m; sourceTree = "<group>"; };
+		3885A24118DC8EAB0073D002 /* ZHFCollection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ZHFCollection.h; sourceTree = "<group>"; };
+		3885A24218DC8EAB0073D002 /* ZHFCollection.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ZHFCollection.m; sourceTree = "<group>"; };
 		3885A24518DC91690073D002 /* ZHFFMDBQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ZHFFMDBQueue.h; sourceTree = "<group>"; };
 		3885A24618DC91690073D002 /* ZHFFMDBQueue.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ZHFFMDBQueue.m; sourceTree = "<group>"; };
+		3885A25418DC9E8F0073D002 /* FCModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCModel.h; sourceTree = "<group>"; };
+		3885A25518DC9E8F0073D002 /* FCModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FCModel.m; sourceTree = "<group>"; };
+		3885A25618DC9E8F0073D002 /* FCModelCachedObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCModelCachedObject.h; sourceTree = "<group>"; };
+		3885A25718DC9E8F0073D002 /* FCModelCachedObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FCModelCachedObject.m; sourceTree = "<group>"; };
+		3885A25818DC9E8F0073D002 /* FCModelDatabaseQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCModelDatabaseQueue.h; sourceTree = "<group>"; };
+		3885A25918DC9E8F0073D002 /* FCModelDatabaseQueue.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FCModelDatabaseQueue.m; sourceTree = "<group>"; };
+		3885A25D18DCAA780073D002 /* ZHFMember.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ZHFMember.h; sourceTree = "<group>"; };
+		3885A25E18DCAA780073D002 /* ZHFMember.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ZHFMember.m; sourceTree = "<group>"; };
 		5E40ACC83C7845119F3752AF /* libPods.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libPods.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		B2F45EBEC345473AB20F3A4E /* Pods-test.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-test.xcconfig"; path = "Pods/Pods-test.xcconfig"; sourceTree = "<group>"; };
 		D9C54DD1CD6744A59A9508DF /* libPods-test.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-test.a"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -99,6 +111,7 @@
 		3885A1F518DC81E40073D002 = {
 			isa = PBXGroup;
 			children = (
+				3885A25318DC9E8F0073D002 /* FCModel */,
 				3885A20718DC81E40073D002 /* FMDBTest */,
 				3885A22618DC81E40073D002 /* FMDBTestTests */,
 				3885A20018DC81E40073D002 /* Frameworks */,
@@ -179,12 +192,27 @@
 		3885A24418DC8EAE0073D002 /* Model */ = {
 			isa = PBXGroup;
 			children = (
-				3885A24118DC8EAB0073D002 /* ZHFModel.h */,
-				3885A24218DC8EAB0073D002 /* ZHFModel.m */,
+				3885A24118DC8EAB0073D002 /* ZHFCollection.h */,
+				3885A24218DC8EAB0073D002 /* ZHFCollection.m */,
+				3885A25D18DCAA780073D002 /* ZHFMember.h */,
+				3885A25E18DCAA780073D002 /* ZHFMember.m */,
 				3885A24518DC91690073D002 /* ZHFFMDBQueue.h */,
 				3885A24618DC91690073D002 /* ZHFFMDBQueue.m */,
 			);
 			name = Model;
+			sourceTree = "<group>";
+		};
+		3885A25318DC9E8F0073D002 /* FCModel */ = {
+			isa = PBXGroup;
+			children = (
+				3885A25418DC9E8F0073D002 /* FCModel.h */,
+				3885A25518DC9E8F0073D002 /* FCModel.m */,
+				3885A25618DC9E8F0073D002 /* FCModelCachedObject.h */,
+				3885A25718DC9E8F0073D002 /* FCModelCachedObject.m */,
+				3885A25818DC9E8F0073D002 /* FCModelDatabaseQueue.h */,
+				3885A25918DC9E8F0073D002 /* FCModelDatabaseQueue.m */,
+			);
+			path = FCModel;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -353,10 +381,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				3885A20E18DC81E40073D002 /* main.m in Sources */,
+				3885A25B18DC9E8F0073D002 /* FCModelCachedObject.m in Sources */,
+				3885A25A18DC9E8F0073D002 /* FCModel.m in Sources */,
 				3885A24718DC91690073D002 /* ZHFFMDBQueue.m in Sources */,
+				3885A25F18DCAA780073D002 /* ZHFMember.m in Sources */,
 				3885A21818DC81E40073D002 /* ZHFViewController.m in Sources */,
-				3885A24318DC8EAB0073D002 /* ZHFModel.m in Sources */,
+				3885A24318DC8EAB0073D002 /* ZHFCollection.m in Sources */,
 				3885A23C18DC8D8A0073D002 /* ZHFFileManager.m in Sources */,
+				3885A25C18DC9E8F0073D002 /* FCModelDatabaseQueue.m in Sources */,
 				3885A21218DC81E40073D002 /* ZHFAppDelegate.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

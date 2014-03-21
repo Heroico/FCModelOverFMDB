@@ -1,5 +1,5 @@
 //
-//  ZHFFMDBQueue.h
+//  ZHFModel.h
 //  FMDBTest
 //
 //  Created by Alvaro Barbeira on 3/21/14.
@@ -7,14 +7,15 @@
 //
 
 #import <Foundation/Foundation.h>
-#import <FMDB/FMDatabaseQueue.h>
+#import "FCModel.h"
 
-@interface ZHFFMDBQueue : FMDatabaseQueue
-
+@interface ZHFCollection : FCModel
 // table
 @property (nonatomic, assign) int64_t id;
+@property (nonatomic, assign) int64_t parent_id;
 @property (nonatomic, copy) NSString *name;
 
 // non table
+- (NSArray *)members;
 
 @end

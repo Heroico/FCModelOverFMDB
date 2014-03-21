@@ -6,12 +6,11 @@
 //  Copyright (c) 2014 Zauber. All rights reserved.
 //
 
-#import "ZHFModel.h"
+#import "ZHFCollection.h"
 #import <FMDB/FMDatabase.h>
 #import <FMDB/FMDatabaseQueue.h>
 
-@implementation ZHFModel
-
+@implementation ZHFCollection
 
 
 @end
