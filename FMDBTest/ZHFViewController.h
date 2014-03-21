@@ -9,5 +9,8 @@
 #import <UIKit/UIKit.h>
 
 @interface ZHFViewController : UIViewController
+@property (weak, nonatomic) IBOutlet UITableView *tableview;
 
+- (IBAction)editButtonTapped:(id)sender;
+- (IBAction)newActiontapped:(UIBarButtonItem *)sender;
 @end
