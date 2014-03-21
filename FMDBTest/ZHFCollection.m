@@ -7,10 +7,14 @@
 //
 
 #import "ZHFCollection.h"
+#import "ZHFMember.h"
 #import <FMDB/FMDatabase.h>
 #import <FMDB/FMDatabaseQueue.h>
 
 @implementation ZHFCollection
 
+- (NSArray *)members {
+    return [ZHFMember instancesWhere:[NSString stringWithFormat:@"parent_id = %lld", self.id]];
+}
 
 @end

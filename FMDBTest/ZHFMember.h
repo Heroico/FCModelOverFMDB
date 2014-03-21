@@ -11,6 +11,8 @@
 @class ZHFCollection;
 
 @interface ZHFMember : FCModel
++ (id)newWithParentCollection:(ZHFCollection *)collection;
+
 // table
 @property (nonatomic, assign) int64_t id;
 @property (nonatomic, assign) int64_t parent_id;

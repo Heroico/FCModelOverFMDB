@@ -9,6 +9,7 @@
 #import <PSAlertView/PSPDFAlertView.h>
 #import "ZHFViewController.h"
 #import "ZHFCollection.h"
+#import "ZHFDetailViewController.h"
 
 @interface ZHFViewController ()<UITableViewDataSource, UITableViewDelegate>
 @property (nonatomic, retain) NSArray *collections;
@@ -19,6 +20,15 @@
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
     self.collections = [ZHFCollection allInstances];
+}
+
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    if ([segue.identifier isEqualToString:@"CollectionToMemberSegueIdentifier"]) {
+        NSIndexPath *selected = [self.tableview indexPathForSelectedRow];
+        ZHFCollection *collection = self.collections[selected.row];
+        ZHFDetailViewController *destination = segue.destinationViewController;
+        destination.collection = collection;
+    }
 }
 
 #pragma mark - UITableView delegate

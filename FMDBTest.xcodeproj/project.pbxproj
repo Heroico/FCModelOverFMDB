@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		384025E518DCB306008FCA6B /* FMDatabaseQueue+Private.m in Sources */ = {isa = PBXBuildFile; fileRef = 384025E418DCB306008FCA6B /* FMDatabaseQueue+Private.m */; };
+		384025EB18DCC09B008FCA6B /* FCModel+Private.m in Sources */ = {isa = PBXBuildFile; fileRef = 384025EA18DCC09B008FCA6B /* FCModel+Private.m */; };
+		384025EE18DCC31B008FCA6B /* ZHFDetailViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 384025ED18DCC31B008FCA6B /* ZHFDetailViewController.m */; };
 		3885A20218DC81E40073D002 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3885A20118DC81E40073D002 /* Foundation.framework */; };
 		3885A20418DC81E40073D002 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3885A20318DC81E40073D002 /* CoreGraphics.framework */; };
 		3885A20618DC81E40073D002 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3885A20518DC81E40073D002 /* UIKit.framework */; };
@@ -43,8 +45,12 @@
 
 /* Begin PBXFileReference section */
 		36CB1F7E871B4BD9890055DE /* Pods.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Pods.xcconfig; path = Pods/Pods.xcconfig; sourceTree = "<group>"; };
-		384025E318DCB306008FCA6B /* FMDatabaseQueue+Private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "FMDatabaseQueue+Private.h"; sourceTree = "<group>"; };
-		384025E418DCB306008FCA6B /* FMDatabaseQueue+Private.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "FMDatabaseQueue+Private.m"; sourceTree = "<group>"; };
+		384025E318DCB306008FCA6B /* FMDatabaseQueue+Private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "FMDatabaseQueue+Private.h"; path = "FMDBTest/FMDatabaseQueue+Private.h"; sourceTree = "<group>"; };
+		384025E418DCB306008FCA6B /* FMDatabaseQueue+Private.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = "FMDatabaseQueue+Private.m"; path = "FMDBTest/FMDatabaseQueue+Private.m"; sourceTree = "<group>"; };
+		384025E918DCC09B008FCA6B /* FCModel+Private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "FCModel+Private.h"; sourceTree = "<group>"; };
+		384025EA18DCC09B008FCA6B /* FCModel+Private.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "FCModel+Private.m"; sourceTree = "<group>"; };
+		384025EC18DCC31B008FCA6B /* ZHFDetailViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ZHFDetailViewController.h; sourceTree = "<group>"; };
+		384025ED18DCC31B008FCA6B /* ZHFDetailViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ZHFDetailViewController.m; sourceTree = "<group>"; };
 		3885A1FE18DC81E40073D002 /* FMDBTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FMDBTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3885A20118DC81E40073D002 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		3885A20318DC81E40073D002 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
@@ -105,9 +111,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		384025E818DCC082008FCA6B /* FMDB */ = {
+			isa = PBXGroup;
+			children = (
+				384025E318DCB306008FCA6B /* FMDatabaseQueue+Private.h */,
+				384025E418DCB306008FCA6B /* FMDatabaseQueue+Private.m */,
+			);
+			name = FMDB;
+			sourceTree = "<group>";
+		};
 		3885A1F518DC81E40073D002 = {
 			isa = PBXGroup;
 			children = (
+				384025E818DCC082008FCA6B /* FMDB */,
 				3885A25318DC9E8F0073D002 /* FCModel */,
 				3885A20718DC81E40073D002 /* FMDBTest */,
 				3885A22618DC81E40073D002 /* FMDBTestTests */,
@@ -151,6 +167,8 @@
 				3885A21318DC81E40073D002 /* Main.storyboard */,
 				3885A21618DC81E40073D002 /* ZHFViewController.h */,
 				3885A21718DC81E40073D002 /* ZHFViewController.m */,
+				384025EC18DCC31B008FCA6B /* ZHFDetailViewController.h */,
+				384025ED18DCC31B008FCA6B /* ZHFDetailViewController.m */,
 				3885A21918DC81E40073D002 /* Images.xcassets */,
 				3885A20818DC81E40073D002 /* Supporting Files */,
 			);
@@ -195,8 +213,6 @@
 				3885A25E18DCAA780073D002 /* ZHFMember.m */,
 				3885A24518DC91690073D002 /* ZHFFMDBQueue.h */,
 				3885A24618DC91690073D002 /* ZHFFMDBQueue.m */,
-				384025E318DCB306008FCA6B /* FMDatabaseQueue+Private.h */,
-				384025E418DCB306008FCA6B /* FMDatabaseQueue+Private.m */,
 			);
 			name = Model;
 			sourceTree = "<group>";
@@ -206,6 +222,8 @@
 			children = (
 				3885A25418DC9E8F0073D002 /* FCModel.h */,
 				3885A25518DC9E8F0073D002 /* FCModel.m */,
+				384025E918DCC09B008FCA6B /* FCModel+Private.h */,
+				384025EA18DCC09B008FCA6B /* FCModel+Private.m */,
 			);
 			path = FCModel;
 			sourceTree = "<group>";
@@ -377,10 +395,12 @@
 			files = (
 				3885A20E18DC81E40073D002 /* main.m in Sources */,
 				384025E518DCB306008FCA6B /* FMDatabaseQueue+Private.m in Sources */,
+				384025EE18DCC31B008FCA6B /* ZHFDetailViewController.m in Sources */,
 				3885A25A18DC9E8F0073D002 /* FCModel.m in Sources */,
 				3885A24718DC91690073D002 /* ZHFFMDBQueue.m in Sources */,
 				3885A25F18DCAA780073D002 /* ZHFMember.m in Sources */,
 				3885A21818DC81E40073D002 /* ZHFViewController.m in Sources */,
+				384025EB18DCC09B008FCA6B /* FCModel+Private.m in Sources */,
 				3885A24318DC8EAB0073D002 /* ZHFCollection.m in Sources */,
 				3885A23C18DC8D8A0073D002 /* ZHFFileManager.m in Sources */,
 				3885A21218DC81E40073D002 /* ZHFAppDelegate.m in Sources */,
