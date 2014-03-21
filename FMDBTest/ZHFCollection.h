@@ -12,7 +12,6 @@
 @interface ZHFCollection : FCModel
 // table
 @property (nonatomic, assign) int64_t id;
-@property (nonatomic, assign) int64_t parent_id;
 @property (nonatomic, copy) NSString *name;
 
 // non table

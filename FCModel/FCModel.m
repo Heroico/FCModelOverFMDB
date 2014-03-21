@@ -2,38 +2,31 @@
 //  FCModel.m
 //
 //  Created by Marco Arment on 7/18/13.
-//  Copyright (c) 2013-2014 Marco Arment. See included LICENSE file.
+//  Copyright (c) 2013 Marco Arment. All rights reserved.
 //
 
 #import <objc/runtime.h>
 #import <string.h>
 #import "FCModel.h"
-#import "FCModelCachedObject.h"
-#import "FCModelDatabaseQueue.h"
 #import "FMDatabase.h"
-#import "FMDatabaseAdditions.h"
+#import "FMDatabaseQueue.h"
+#import "FMDatabaseQueue+Private.h"
 #import <sqlite3.h>
-@import Security;
 
 NSString * const FCModelInsertNotification = @"FCModelInsertNotification";
 NSString * const FCModelUpdateNotification = @"FCModelUpdateNotification";
 NSString * const FCModelDeleteNotification = @"FCModelDeleteNotification";
-NSString * const FCModelInstanceSetKey = @"FCModelInstanceSetKey";
-
-NSString * const FCModelAnyChangeNotification = @"FCModelAnyChangeNotification";
-NSString * const FCModelWillReloadNotification = @"FCModelWillReloadNotification";
+NSString * const FCModelInstanceKey = @"FCModelInstanceKey";
 
 static NSString * const FCModelReloadNotification = @"FCModelReloadNotification";
 static NSString * const FCModelSaveNotification   = @"FCModelSaveNotification";
 static NSString * const FCModelClassKey           = @"class";
 
-static FCModelDatabaseQueue *g_databaseQueue = NULL;
+static FMDatabaseQueue *g_databaseQueue = NULL;
 static NSDictionary *g_fieldInfo = NULL;
 static NSDictionary *g_primaryKeyFieldName = NULL;
-static NSSet *g_tablesUsingAutoIncrementEmulation = NULL;
 static NSMutableDictionary *g_instances = NULL;
 static dispatch_semaphore_t g_instancesReadLock;
-static NSMutableDictionary *g_enqueuedBatchNotifications = NULL;
 
 @interface FMDatabase (HackForVAListsSinceThisIsPrivate)
 - (FMResultSet *)executeQuery:(NSString *)sql withArgumentsInArray:(NSArray*)arrayArgs orDictionary:(NSDictionary *)dictionaryArgs orVAList:(va_list)args;
@@ -51,10 +44,9 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 };
 
 @interface FCFieldInfo : NSObject
-@property (nonatomic) BOOL nullAllowed;
-@property (nonatomic) FCFieldType type;
+@property (nonatomic, assign) BOOL nullAllowed;
+@property (nonatomic, assign) FCFieldType type;
 @property (nonatomic) id defaultValue;
-@property (nonatomic) Class propertyClass;
 @end
 @implementation FCFieldInfo
 - (NSString *)description
@@ -70,7 +62,9 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
 @interface FCModel () {
     BOOL existsInDatabase;
+    BOOL primaryKeySet;
     BOOL deleted;
+    BOOL primaryKeyLocked;
 }
 @property (nonatomic, strong) NSDictionary *databaseFieldNames;
 @property (nonatomic, strong) NSMutableDictionary *changedProperties;
@@ -84,18 +78,12 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
 #pragma mark - For subclasses to override
 
-+ (NSString *)tableName { return NSStringFromClass(self); }
-
-- (void)didInit { }
 - (BOOL)shouldInsert { return YES; }
 - (BOOL)shouldUpdate { return YES; }
 - (BOOL)shouldDelete { return YES; }
 - (void)didInsert { }
 - (void)didUpdate { }
 - (void)didDelete { }
-- (void)saveWasRefused { }
-- (void)saveDidFail { }
-- (void)didChangeValueForFieldName:(NSString *)fieldName fromValue:(id)oldValue toValue:(id)newValue { }
 
 #pragma mark - Instance tracking and uniquing
 
@@ -108,16 +96,6 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     });
 }
 
-+ (NSArray *)allLoadedInstances
-{
-    [self uniqueMapInit];
-    dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
-    NSMapTable *classCache = g_instances[self];
-    NSArray *instances = classCache ? [classCache.objectEnumerator.allObjects copy] : [NSArray array];
-    dispatch_semaphore_signal(g_instancesReadLock);
-    return instances;
-}
-
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue { return [self instanceWithPrimaryKey:primaryKeyValue databaseRowValues:nil createIfNonexistent:YES]; }
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue createIfNonexistent:(BOOL)create { return [self instanceWithPrimaryKey:primaryKeyValue databaseRowValues:nil createIfNonexistent:create]; }
 
@@ -125,8 +103,6 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 {
     if (! primaryKeyValue || primaryKeyValue == [NSNull null]) return [self new];
     [self uniqueMapInit];
-    
-    primaryKeyValue = [self normalizedPrimaryKeyValue:primaryKeyValue];
     
     FCModel *instance = NULL;
     dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
@@ -198,125 +174,92 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
 + (void)dataWasUpdatedExternally
 {
-    [NSNotificationCenter.defaultCenter postNotificationName:FCModelWillReloadNotification object:nil userInfo:@{ FCModelClassKey : self }];
     [NSNotificationCenter.defaultCenter postNotificationName:FCModelReloadNotification object:nil userInfo:@{ FCModelClassKey : self }];
-    [NSNotificationCenter.defaultCenter postNotificationName:FCModelAnyChangeNotification object:nil userInfo:@{ FCModelClassKey : self }];
 }
 
 #pragma mark - Mapping properties to database fields
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
-    if ([keyPath isEqualToString:g_primaryKeyFieldName[self.class]]) {
-        [[NSException exceptionWithName:NSGenericException reason:@"Cannot change primary key value on FCModel" userInfo:nil] raise];
-    }
-
+    if ([keyPath isEqualToString:g_primaryKeyFieldName[self.class]]) primaryKeySet = YES;
+    if (! primaryKeyLocked) return;
     NSObject *oldValue, *newValue;
+
     if ( (oldValue = change[NSKeyValueChangeOldKey]) && (newValue = change[NSKeyValueChangeNewKey]) ) {
         if ([oldValue isKindOfClass:[NSURL class]]) oldValue = ((NSURL *)oldValue).absoluteString;
-        else if ([oldValue isKindOfClass:[NSDate class]]) oldValue = [NSNumber numberWithLongLong:[(NSDate *)oldValue timeIntervalSince1970]];
+        else if ([oldValue isKindOfClass:[NSDate class]]) oldValue = [NSNumber numberWithInteger:[(NSDate *)oldValue timeIntervalSince1970]];
 
         if ([newValue isKindOfClass:[NSURL class]]) newValue = ((NSURL *)newValue).absoluteString;
-        else if ([newValue isKindOfClass:[NSDate class]]) newValue = [NSNumber numberWithLongLong:[(NSDate *)newValue timeIntervalSince1970]];
+        else if ([newValue isKindOfClass:[NSDate class]]) newValue = [NSNumber numberWithInteger:[(NSDate *)newValue timeIntervalSince1970]];
 
         if ([oldValue isEqual:newValue]) return;
     }
     
-    if (self.changedProperties && ! self.changedProperties[keyPath]) [self.changedProperties setObject:(oldValue ?: [NSNull null]) forKey:keyPath];
-    [self didChangeValueForFieldName:keyPath fromValue:oldValue toValue:newValue];
-}
-
-- (id)serializedDatabaseRepresentationOfValue:(id)instanceValue forPropertyNamed:(NSString *)propertyName
-{
-    if ([instanceValue isKindOfClass:NSArray.class] || [instanceValue isKindOfClass:NSDictionary.class]) {
-        NSError *error = nil;
-        NSData *bplist = [NSPropertyListSerialization dataWithPropertyList:instanceValue format:NSPropertyListBinaryFormat_v1_0 options:NSPropertyListImmutable error:&error];
-        if (error) {
-            [[NSException exceptionWithName:NSInvalidArgumentException reason:[NSString stringWithFormat:
-                @"Cannot serialize %@ to plist for %@.%@: %@", NSStringFromClass(((NSObject *)instanceValue).class), NSStringFromClass(self.class), propertyName, error.localizedDescription
-            ] userInfo:nil] raise];
-        }
-        return bplist;
-    } else if ([instanceValue isKindOfClass:NSURL.class]) {
-        return [(NSURL *)instanceValue absoluteString];
-    } else if ([instanceValue isKindOfClass:NSDate.class]) {
-        return [NSNumber numberWithLongLong:[(NSDate *)instanceValue timeIntervalSince1970]];
+    BOOL isPrimaryKey = [keyPath isEqualToString:[self.class primaryKeyFieldName]];
+    if (existsInDatabase && isPrimaryKey) {
+        if (primaryKeyLocked) [[NSException exceptionWithName:NSInvalidArgumentException reason:@"Cannot change primary key value for already-saved FCModel" userInfo:nil] raise];
+    } else if (isPrimaryKey) {
+        primaryKeySet = YES;
     }
 
-    return instanceValue;
+    if (! isPrimaryKey && self.changedProperties && ! self.changedProperties[keyPath]) [self.changedProperties setObject:(oldValue ?: [NSNull null]) forKey:keyPath];
 }
 
 - (id)encodedValueForFieldName:(NSString *)fieldName
 {
-    id value = [self serializedDatabaseRepresentationOfValue:[self valueForKey:fieldName] forPropertyNamed:fieldName];
-    return value ?: [NSNull null];
-}
-
-- (id)unserializedRepresentationOfDatabaseValue:(id)databaseValue forPropertyNamed:(NSString *)propertyName
-{
-    Class propertyClass = [g_fieldInfo[self.class][propertyName] propertyClass];
+    id value = [self valueForKey:fieldName];
+    if (! value) return [NSNull null];
     
-    if (propertyClass && databaseValue) {
-        if (propertyClass == NSURL.class) {
-            return [NSURL URLWithString:databaseValue];
-        } else if (propertyClass == NSDate.class) {
-            return [NSDate dateWithTimeIntervalSince1970:[databaseValue longLongValue]];
-        } else if (propertyClass == NSDictionary.class) {
-            NSDictionary *dict = [NSPropertyListSerialization propertyListWithData:databaseValue options:kCFPropertyListImmutable format:NULL error:NULL];
-            return dict && [dict isKindOfClass:NSDictionary.class] ? dict : @{};
-        } else if (propertyClass == NSArray.class) {
-            NSArray *array = [NSPropertyListSerialization propertyListWithData:databaseValue options:kCFPropertyListImmutable format:NULL error:NULL];
-            return array && [array isKindOfClass:NSArray.class] ? array : @[];
+    if ([value isKindOfClass:NSArray.class] || [value isKindOfClass:NSDictionary.class]) {
+        NSError *error = nil;
+        NSData *bplist = [NSPropertyListSerialization dataWithPropertyList:value format:NSPropertyListBinaryFormat_v1_0 options:NSPropertyListImmutable error:&error];
+        if (error) {
+            [[NSException exceptionWithName:NSInvalidArgumentException reason:[NSString stringWithFormat:
+                @"Cannot serialize %@ to plist for %@.%@: %@", NSStringFromClass(((NSObject *)value).class), NSStringFromClass(self.class), fieldName, error.localizedDescription
+            ] userInfo:nil] raise];
         }
+        return bplist;
+    } else if ([value isKindOfClass:NSURL.class]) {
+        return [(NSURL *)value absoluteString];
+    } else if ([value isKindOfClass:NSDate.class]) {
+        return [NSNumber numberWithInteger:[(NSDate *)value timeIntervalSince1970]];
+    } else {
+        return value;
     }
-
-    return databaseValue;
 }
 
 - (void)decodeFieldValue:(id)value intoPropertyName:(NSString *)propertyName
 {
     if (value == [NSNull null]) value = nil;
-    if (class_getProperty(self.class, propertyName.UTF8String)) {
-        [self setValue:[self unserializedRepresentationOfDatabaseValue:value forPropertyNamed:propertyName] forKeyPath:propertyName];
+
+    objc_property_t property = class_getProperty(self.class, [propertyName UTF8String]);
+    if (property) {
+        const char *attrs = property_getAttributes(property);
+        if (attrs[0] == 'T' && attrs[1] == '@' && attrs[2] == '"') attrs = &(attrs[3]);
+
+        if (value && strncmp(attrs, "NSURL", 5) == 0) {
+            value = [NSURL URLWithString:value];
+            if (! value) [[NSException exceptionWithName:NSInvalidArgumentException reason:@"Invalid URL" userInfo:nil] raise];
+        } else if (value && strncmp(attrs, "NSDate", 6) == 0) {
+            value = [NSDate dateWithTimeIntervalSince1970:[value integerValue]];
+        } else if (value && strncmp(attrs, "NSDecimalNumber", 15) == 0) {
+            value = [NSDecimalNumber decimalNumberWithString:[value stringValue]];
+        } else if (value && strncmp(attrs, "NSDictionary", 12) == 0) {
+            value = [NSPropertyListSerialization propertyListWithData:value options:kCFPropertyListImmutable format:NULL error:NULL];
+            if (! value || ! [value isKindOfClass:NSDictionary.class]) value = @{};
+        } else if (value && strncmp(attrs, "NSArray", 7) == 0) {
+            value = [NSPropertyListSerialization propertyListWithData:value options:kCFPropertyListImmutable format:NULL error:NULL];
+            if (! value || ! [value isKindOfClass:NSArray.class]) value = @[];
+        }
+
+        [self setValue:value forKeyPath:propertyName];
     }
 }
 
 + (NSArray *)databaseFieldNames     { return [g_fieldInfo[self] allKeys]; }
 + (NSString *)primaryKeyFieldName { return g_primaryKeyFieldName[self]; }
 
-// For unique-instance consistency:
-// Resolve discrepancies between supplied primary-key value type and the column type that comes out of the database.
-// Without this, it's possible to e.g. pull objects with key @(1) and key @"1" as two different instances of the same record.
-+ (id)normalizedPrimaryKeyValue:(id)value
-{
-    static NSNumberFormatter *numberFormatter;
-    static dispatch_once_t onceToken;
-
-    if (! value) return value;
-    
-    FCFieldInfo *primaryKeyInfo = g_fieldInfo[self][g_primaryKeyFieldName[self]];
-    
-    if ([value isKindOfClass:NSString.class] && (primaryKeyInfo.type == FCFieldTypeInteger || primaryKeyInfo.type == FCFieldTypeDouble || primaryKeyInfo.type == FCFieldTypeBool)) {
-        dispatch_once(&onceToken, ^{ numberFormatter = [[NSNumberFormatter alloc] init]; });
-        value = [numberFormatter numberFromString:value];
-    } else if (! [value isKindOfClass:NSString.class] && primaryKeyInfo.type == FCFieldTypeText) {
-        value = [value stringValue];
-    }
-
-    return value;
-}
-
 #pragma mark - Find methods
-
-+ (NSArray *)cachedInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments
-{
-    return [FCModelLiveResultArray arrayWithModelClass:self queryAfterWHERE:queryAfterWHERE arguments:arguments].allObjects;
-}
-
-+ (id)cachedObjectWithIdentifier:(id)identifier generator:(id (^)(void))generatorBlock
-{
-    return [FCModelCachedObject objectWithModelClass:self cacheIdentifier:identifier generator:generatorBlock].value;
-}
 
 + (NSError *)executeUpdateQuery:(NSString *)query, ...
 {
@@ -405,11 +348,6 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     return results;
 }
 
-+ (NSArray *)instancesWhere:(NSString *)query arguments:(NSArray *)array;
-{
-    return [self _instancesWhere:query andArgs:NULL orArgsArray:array orResultSet:NULL onlyFirst:NO keyed:NO];
-}
-
 + (NSDictionary *)keyedInstancesWhere:(NSString *)query, ...
 {
     va_list args;
@@ -417,24 +355,6 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     NSDictionary *results = [self _instancesWhere:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO];
     va_end(args);
     return results;
-}
-
-+ (instancetype)firstInstanceOrderedBy:(NSString *)query, ...
-{
-    va_list args;
-    va_start(args, query);
-    id result = [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:query] andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:YES keyed:NO];
-    va_end(args);
-    return result;
-}
-
-+ (NSArray *)instancesOrderedBy:(NSString *)query, ...
-{
-    va_list args;
-    va_start(args, query);
-    id result = [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:query] andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO];
-    va_end(args);
-    return result;
 }
 
 + (NSArray *)allInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO]; }
@@ -445,7 +365,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     if (primaryKeyValues.count == 0) return @[];
     
     __block int maxParameterCount = 0;
-    [self inDatabaseSync:^(FMDatabase *db) {
+    [self.databaseQueue inDatabase:^(FMDatabase *db) {
         maxParameterCount = sqlite3_limit(db.sqliteHandle, SQLITE_LIMIT_VARIABLE_NUMBER, -1);
     }];
 
@@ -480,32 +400,6 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     NSMutableDictionary *dictionary = [NSMutableDictionary dictionaryWithCapacity:instances.count];
     for (FCModel *instance in instances) [dictionary setObject:instance forKey:instance.primaryKey];
     return dictionary;
-}
-
-+ (NSUInteger)numberOfInstances
-{
-    NSNumber *value = [self firstValueFromQuery:@"SELECT COUNT(*) FROM $T"];
-    return value ? value.unsignedIntegerValue : 0;
-}
-
-+ (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE, ...
-{
-    __block NSUInteger count = 0;
-    va_list args;
-    va_list *foolTheStaticAnalyzer = &args;
-    va_start(args, queryAfterWHERE);
-    [g_databaseQueue inDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:[@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE]] withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
-        if (! s) [self queryFailedInDatabase:db];
-        if ([s next]) {
-            NSNumber *value = [s objectForColumnIndex:0];
-            if (value) count = value.unsignedIntegerValue;
-        }
-        [s close];
-    }];
-    va_end(args);
-    
-    return count;
 }
 
 + (NSArray *)firstColumnArrayFromQuery:(NSString *)query, ...
@@ -563,36 +457,6 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
 #pragma mark - Attributes and CRUD
 
-+ (id)primaryKeyValueForNewInstance
-{
-    // Emulation for old AUTOINCREMENT tables
-    if (g_tablesUsingAutoIncrementEmulation && [g_tablesUsingAutoIncrementEmulation containsObject:NSStringFromClass(self)]) {
-        id largestNumber = [self firstValueFromQuery:@"SELECT MAX($PK) FROM $T"];
-        int64_t largestExistingValue = largestNumber && largestNumber != NSNull.null ? ((NSNumber *) largestNumber).longLongValue : 0;
-
-        dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
-        NSMapTable *classCache = g_instances[self];
-        NSArray *instances = classCache ? [classCache.objectEnumerator.allObjects copy] : [NSArray array];
-        for (FCModel *instance in instances) {
-            largestExistingValue = MAX(largestExistingValue, ((NSNumber *)instance.primaryKey).longLongValue);
-        }
-        dispatch_semaphore_signal(g_instancesReadLock);
-        
-        largestExistingValue++;
-        return @(largestExistingValue);
-    }
-
-    // Otherwise, issue random 64-bit signed ints
-    uint64_t urandom;
-    if (0 != SecRandomCopyBytes(kSecRandomDefault, sizeof(uint64_t), (uint8_t *) (&urandom))) {
-        arc4random_stir();
-        urandom = ( ((uint64_t) arc4random()) << 32) | (uint64_t) arc4random();
-    }
-
-    int64_t random = (int64_t) (urandom & 0x7FFFFFFFFFFFFFFF);
-    return @(random);
-}
-
 + (instancetype)new  { return [[self alloc] initWithFieldValues:@{} existsInDatabaseAlready:NO]; }
 - (instancetype)init { return [self initWithFieldValues:@{} existsInDatabaseAlready:NO]; }
 
@@ -603,58 +467,27 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
         [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(saveByNotification:) name:FCModelSaveNotification object:nil];
         existsInDatabase = existsInDB;
         deleted = NO;
+        primaryKeyLocked = NO;
+        primaryKeySet = existsInDatabase;
         
-        [self.class uniqueMapInit];
-        
-        [g_fieldInfo[self.class] enumerateKeysAndObjectsUsingBlock:^(NSString *key, id obj, BOOL *stop) {
+        [g_fieldInfo[self.class] enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
             FCFieldInfo *info = (FCFieldInfo *)obj;
-            
-            id suppliedValue = fieldValues[key];
-            if (suppliedValue) {
-                [self decodeFieldValue:suppliedValue intoPropertyName:key];
-            } else {
-                if ([key isEqualToString:g_primaryKeyFieldName[self.class]]) {
-                    NSAssert(! existsInDB, @"Primary key not provided to initWithFieldValues:existsInDatabaseAlready:YES");
-                    existsInDatabase = NO;
-                
-                    // No supplied value to primary key for a new record. Generate a unique key value.
-                    BOOL conflict = NO;
-                    int attempts = 0;
-                    do {
-                        attempts++;
-                        NSAssert1(attempts < 100, @"FCModel subclass %@ is not returning usable, unique values from primaryKeyValueForNewInstance", NSStringFromClass(self.class));
-                        
-                        id newKeyValue = [self.class normalizedPrimaryKeyValue:[self.class primaryKeyValueForNewInstance]];
-                        if ([self.class instanceFromDatabaseWithPrimaryKey:newKeyValue]) continue; // already exists in database
-
-                        // already exists in memory (unsaved)
-                        dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
-                        NSMapTable *classCache = g_instances[self.class];
-                        if (! classCache) classCache = g_instances[(id) self.class] = [NSMapTable strongToWeakObjectsMapTable];
-                        conflict = (nil != [classCache objectForKey:newKeyValue]);
-                        if (! conflict) [classCache setObject:self forKey:newKeyValue];
-                        dispatch_semaphore_signal(g_instancesReadLock);
-                        
-                        [self setValue:newKeyValue forKey:key];
-                    } while (conflict);
-                    
-                } else if (info.defaultValue) {
-                    [self decodeFieldValue:info.defaultValue intoPropertyName:key];
-                }
-            }
-
+            if (info.defaultValue) [self setValue:info.defaultValue forKey:key];
             [self addObserver:self forKeyPath:key options:(NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld) context:NULL];
         }];
 
+        [fieldValues enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+            [self decodeFieldValue:obj intoPropertyName:key];
+        }];
+        
+        primaryKeyLocked = YES;
         self.changedProperties = [NSMutableDictionary dictionary];
-        [self didInit];
     }
     return self;
 }
 
 - (void)saveByNotification:(NSNotification *)n
 {
-    if (deleted) return;
     Class targetedClass = n.userInfo[FCModelClassKey];
     if (targetedClass && ! [self isKindOfClass:targetedClass]) return;
     [self save];
@@ -690,8 +523,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
     if (deleted) {
         [self didDelete];
-        [self postChangeNotification:FCModelDeleteNotification];
-        [self postChangeNotification:FCModelAnyChangeNotification];
+        [NSNotificationCenter.defaultCenter postNotificationName:FCModelDeleteNotification object:self.class userInfo:@{ FCModelInstanceKey : self }];
     } else {
         __block BOOL didUpdate = NO;
         [resultDictionary enumerateKeysAndObjectsUsingBlock:^(NSString *fieldName, id fieldValue, BOOL *stop) {
@@ -717,8 +549,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
         if (didUpdate) {
             [self didUpdate];
-            [self postChangeNotification:FCModelUpdateNotification];
-            [self postChangeNotification:FCModelAnyChangeNotification];
+            [NSNotificationCenter.defaultCenter postNotificationName:FCModelUpdateNotification object:self.class userInfo:@{ FCModelInstanceKey : self }];
         }
     }
 }
@@ -784,10 +615,13 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     NSArray *columnNames;
     NSMutableArray *values;
     
-    NSString *tableName = self.class.tableName;
+    NSString *tableName = NSStringFromClass(self.class);
     NSString *pkName = g_primaryKeyFieldName[self.class];
-    id primaryKey = [self encodedValueForFieldName:pkName];
-    NSAssert1(primaryKey, @"Cannot update %@ without primary key value", NSStringFromClass(self.class));
+    id primaryKey = primaryKeySet ? [self encodedValueForFieldName:pkName] : nil;
+    if (! primaryKey) {
+        NSAssert1(! update, @"Cannot update %@ without primary key", NSStringFromClass(self.class));
+        primaryKey = [NSNull null];
+    }
 
     // Validate NOT NULL columns
     [g_fieldInfo[self.class] enumerateKeysAndObjectsUsingBlock:^(id key, FCFieldInfo *info, BOOL *stop) {
@@ -800,16 +634,10 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     }];
     
     if (update) {
-        if (! [self shouldUpdate]) {
-            [self saveWasRefused];
-            return FCModelSaveRefused;
-        }
+        if (! [self shouldUpdate]) return FCModelSaveRefused;
         columnNames = [self.changedProperties allKeys];
     } else {
-        if (! [self shouldInsert]) {
-            [self saveWasRefused];
-            return FCModelSaveRefused;
-        }
+        if (! [self shouldInsert]) return FCModelSaveRefused;
         NSMutableSet *columnNamesMinusPK = [[NSSet setWithArray:[g_fieldInfo[self.class] allKeys]] mutableCopy];
         [columnNamesMinusPK removeObject:pkName];
         columnNames = [columnNamesMinusPK allObjects];
@@ -848,31 +676,34 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     }
 
     __block BOOL success = NO;
+    __block sqlite_int64 lastInsertID;
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
         success = [db executeUpdate:query withArgumentsInArray:values];
         if (success) {
+            lastInsertID = [db lastInsertRowId];
             self._lastSQLiteError = nil;
         } else {
             self._lastSQLiteError = db.lastError;
         }
     }];
     
-    if (! success) {
-        [self saveDidFail];
-        return FCModelSaveFailed;
-    }
+    if (! success) return FCModelSaveFailed;
 
+    if (! primaryKey || primaryKey == [NSNull null]) {
+        [self setValue:[NSNumber numberWithUnsignedLongLong:lastInsertID] forKey:g_primaryKeyFieldName[self.class]];
+        [self registerUniqueInstance];
+    }
+    
     [self.changedProperties removeAllObjects];
+    primaryKeySet = YES;
     existsInDatabase = YES;
     
     if (update) {
         [self didUpdate];
-        [self postChangeNotification:FCModelUpdateNotification];
-        [self postChangeNotification:FCModelAnyChangeNotification];
+        [NSNotificationCenter.defaultCenter postNotificationName:FCModelUpdateNotification object:self.class userInfo:@{ FCModelInstanceKey : self }];
     } else {
         [self didInsert];
-        [self postChangeNotification:FCModelInsertNotification];
-        [self postChangeNotification:FCModelAnyChangeNotification];
+        [NSNotificationCenter.defaultCenter postNotificationName:FCModelInsertNotification object:self.class userInfo:@{ FCModelInstanceKey : self }];
     }
     
     return FCModelSaveSucceeded;
@@ -881,10 +712,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 - (FCModelSaveResult)delete
 {
     if (deleted) return FCModelSaveNoChanges;
-    if (! [self shouldDelete]) {
-        [self saveWasRefused];
-        return FCModelSaveRefused;
-    }
+    if (! [self shouldDelete]) return FCModelSaveRefused;
     
     __block BOOL success = NO;
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
@@ -893,16 +721,12 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
         self._lastSQLiteError = success ? nil : db.lastError;
     }];
 
-    if (! success) {
-        [self saveDidFail];
-        return FCModelSaveFailed;
-    }
+    if (! success) return FCModelSaveFailed;
     
     deleted = YES;
     existsInDatabase = NO;
     [self didDelete];
-    [self postChangeNotification:FCModelDeleteNotification];
-    [self postChangeNotification:FCModelAnyChangeNotification];
+    [NSNotificationCenter.defaultCenter postNotificationName:FCModelDeleteNotification object:self.class userInfo:@{ FCModelInstanceKey : self }];
     [self removeUniqueInstance];
     
     return FCModelSaveSucceeded;
@@ -921,7 +745,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 {
     if (self == FCModel.class) return query;
     query = [query stringByReplacingOccurrencesOfString:@"$PK" withString:g_primaryKeyFieldName[self]];
-    return [query stringByReplacingOccurrencesOfString:@"$T" withString:self.tableName];
+    return [query stringByReplacingOccurrencesOfString:@"$T" withString:NSStringFromClass(self)];
 }
 
 - (NSString *)description
@@ -950,39 +774,34 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
 + (void)openDatabaseAtPath:(NSString *)path key:(NSString *)key withDatabaseInitializer:(void (^)(FMDatabase *db))databaseInitializer schemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder
 {
-    g_databaseQueue = [[FCModelDatabaseQueue alloc] initWithDatabasePath:path];
+    g_databaseQueue = [FMDatabaseQueue databaseQueueWithPath:path];
     [g_databaseQueue.database setKey:key];
     NSMutableDictionary *mutableFieldInfo = [NSMutableDictionary dictionary];
     NSMutableDictionary *mutablePrimaryKeyFieldName = [NSMutableDictionary dictionary];
     
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
         if (databaseInitializer) databaseInitializer(db);
-
+        
         int startingSchemaVersion = 0;
-        FMResultSet *rs = [db executeQuery:@"PRAGMA user_version"];
-        if ([rs next]) startingSchemaVersion = [rs intForColumnIndex:0];
+        FMResultSet *rs = [db executeQuery:@"SELECT value FROM _FCModelMetadata WHERE key = 'schema_version'"];
+        if ([rs next]) {
+            startingSchemaVersion = [rs intForColumnIndex:0];
+        } else {
+            [db executeUpdate:@"CREATE TABLE _FCModelMetadata (key TEXT, value TEXT, PRIMARY KEY (key))"];
+            [db executeUpdate:@"INSERT INTO _FCModelMetadata VALUES ('schema_version', 0)"];
+        }
         [rs close];
         
         int newSchemaVersion = startingSchemaVersion;
         schemaBuilder(db, &newSchemaVersion);
         if (newSchemaVersion != startingSchemaVersion) {
-            [db executeUpdate:[NSString stringWithFormat:@"PRAGMA user_version = %d", newSchemaVersion]];
+            [db executeUpdate:@"UPDATE _FCModelMetadata SET value = ? WHERE key = 'schema_version'", @(newSchemaVersion)];
         }
-        
-        // Scan for legacy AUTOINCREMENT usage
-        NSMutableSet *autoincTables = [NSMutableSet set];
-        FMResultSet *autoincRS = [db executeQuery:@"SELECT name FROM sqlite_master WHERE UPPER(sql) LIKE '%AUTOINCREMENT%'"];
-        while ([autoincRS next]) {
-            [autoincTables addObject:[autoincRS stringForColumnIndex:0]];
-            NSLog(@"[FCModel] Warning: database table %@ uses AUTOINCREMENT, which FCModel no longer supports. Its behavior will be approximated.", [autoincRS stringForColumnIndex:0]);
-        }
-        [autoincRS close];
-        if (autoincTables.count) g_tablesUsingAutoIncrementEmulation = [autoincTables copy];
         
         // Read schema for field names and primary keys
         FMResultSet *tablesRS = [db executeQuery:
-            @"SELECT DISTINCT tbl_name FROM (SELECT * FROM sqlite_master UNION ALL SELECT * FROM sqlite_temp_master) WHERE type != 'meta' AND name NOT LIKE 'sqlite_%'"
-       ];
+            @"SELECT DISTINCT tbl_name FROM (SELECT * FROM sqlite_master UNION ALL SELECT * FROM sqlite_temp_master) WHERE type != 'meta' AND name NOT LIKE 'sqlite_%' AND name != '_FCModelMetadata'"
+        ];
         while ([tablesRS next]) {
             NSString *tableName = [tablesRS stringForColumnIndex:0];
             Class tableModelClass = NSClassFromString(tableName);
@@ -994,26 +813,9 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
             FMResultSet *columnsRS = [db executeQuery:[NSString stringWithFormat: @"PRAGMA table_info('%@')", tableName]];
             while ([columnsRS next]) {
                 NSString *fieldName = [columnsRS stringForColumnIndex:1];
-                
-                objc_property_t property = class_getProperty(tableModelClass, fieldName.UTF8String);
-                if (! property) {
+                if (NULL == class_getProperty(tableModelClass, [fieldName UTF8String])) {
                     NSLog(@"[FCModel] ignoring column %@.%@, no matching model property", tableName, fieldName);
                     continue;
-                }
-                
-                NSArray *propertyAttributes = [[NSString stringWithCString:property_getAttributes(property) encoding:NSASCIIStringEncoding]componentsSeparatedByString:@","];
-                if ([propertyAttributes containsObject:@"R"]) {
-                    NSLog(@"[FCModel] ignoring column %@.%@, matching model property is readonly", tableName, fieldName);
-                    continue;
-                }
-                
-                Class propertyClass;
-                NSString *propertyClassName, *typeString = propertyAttributes.firstObject;
-                if (typeString &&
-                    [typeString hasPrefix:@"T@\""] && [typeString hasSuffix:@"\""] && typeString.length > 4 &&
-                    (propertyClassName = [typeString substringWithRange:NSMakeRange(3, typeString.length - 4)])
-                ) {
-                    propertyClass = NSClassFromString(propertyClassName);
                 }
                 
                 int isPK = [columnsRS intForColumnIndex:5];
@@ -1022,7 +824,6 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
                 NSString *fieldType = [columnsRS stringForColumnIndex:2];
                 FCFieldInfo *info = [FCFieldInfo new];
-                info.propertyClass = propertyClass;
                 info.nullAllowed = ! [columnsRS boolForColumnIndex:3];
                 
                 // Type-parsing algorithm from SQLite's column-affinity rules: http://www.sqlite.org/datatype3.html
@@ -1091,82 +892,6 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     [g_instances removeAllObjects];
 }
 
-+ (void)inDatabaseSync:(void (^)(FMDatabase *db))block { [g_databaseQueue inDatabase:block]; }
-
-#pragma mark - Batch notification queuing
-
-+ (dispatch_semaphore_t)notificationBatchLock
-{
-    static dispatch_once_t onceToken;
-    static dispatch_semaphore_t lock;
-    dispatch_once(&onceToken, ^{
-        lock = dispatch_semaphore_create(1);
-    });
-    return lock;
-}
-
-+ (void)beginNotificationBatch
-{
-    dispatch_semaphore_t lock = [self notificationBatchLock];
-    dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
-    if (! g_enqueuedBatchNotifications) {
-        g_enqueuedBatchNotifications = [NSMutableDictionary dictionary];
-    }
-    dispatch_semaphore_signal(lock);
-}
-
-+ (void)endNotificationBatchAndNotify:(BOOL)sendQueuedNotifications
-{
-    if (! g_enqueuedBatchNotifications) return;
-
-    dispatch_semaphore_t lock = [self notificationBatchLock];    
-    dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
-    NSDictionary *notificationsToSend = sendQueuedNotifications ? [g_enqueuedBatchNotifications copy] : nil;
-    g_enqueuedBatchNotifications = nil;
-    dispatch_semaphore_signal(lock);
-    
-    if (sendQueuedNotifications) {
-        [notificationsToSend enumerateKeysAndObjectsUsingBlock:^(Class class, NSDictionary *notificationsForClass, BOOL *stop) {
-            [notificationsForClass enumerateKeysAndObjectsUsingBlock:^(NSString *name, NSSet *objects, BOOL *stop) {
-                [NSNotificationCenter.defaultCenter postNotificationName:name object:class userInfo:@{
-                    FCModelInstanceSetKey : objects
-                }];
-            }];
-        }];
-    }
-}
-
-- (void)postChangeNotification:(NSString *)name
-{
-    BOOL enqueued = NO;
-    
-    dispatch_semaphore_t lock = [self.class notificationBatchLock];
-    dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
-    if (g_enqueuedBatchNotifications) {
-        id class = self.class;
-        NSMutableDictionary *notificationsForClass = g_enqueuedBatchNotifications[class];
-        if (! notificationsForClass) {
-            notificationsForClass = [NSMutableDictionary dictionary];
-            g_enqueuedBatchNotifications[class] = notificationsForClass;
-        }
-        
-        NSMutableSet *instancesForNotification = notificationsForClass[name];
-        if (instancesForNotification) {
-            [instancesForNotification addObject:self];
-        } else {
-            instancesForNotification = [NSMutableSet setWithObject:self];
-            notificationsForClass[name] = instancesForNotification;
-        }
-        
-        enqueued = YES;
-    }
-    dispatch_semaphore_signal(lock);
-    
-    if (! enqueued) {
-        [NSNotificationCenter.defaultCenter postNotificationName:name object:self.class userInfo:@{
-            FCModelInstanceSetKey : [NSSet setWithObject:self]
-        }];
-    }
-}
++ (FMDatabaseQueue *)databaseQueue { return g_databaseQueue; }
 
 @end

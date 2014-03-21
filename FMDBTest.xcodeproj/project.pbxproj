@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		384025E518DCB306008FCA6B /* FMDatabaseQueue+Private.m in Sources */ = {isa = PBXBuildFile; fileRef = 384025E418DCB306008FCA6B /* FMDatabaseQueue+Private.m */; };
 		3885A20218DC81E40073D002 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3885A20118DC81E40073D002 /* Foundation.framework */; };
 		3885A20418DC81E40073D002 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3885A20318DC81E40073D002 /* CoreGraphics.framework */; };
 		3885A20618DC81E40073D002 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3885A20518DC81E40073D002 /* UIKit.framework */; };
@@ -25,8 +26,6 @@
 		3885A24318DC8EAB0073D002 /* ZHFCollection.m in Sources */ = {isa = PBXBuildFile; fileRef = 3885A24218DC8EAB0073D002 /* ZHFCollection.m */; };
 		3885A24718DC91690073D002 /* ZHFFMDBQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = 3885A24618DC91690073D002 /* ZHFFMDBQueue.m */; };
 		3885A25A18DC9E8F0073D002 /* FCModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 3885A25518DC9E8F0073D002 /* FCModel.m */; };
-		3885A25B18DC9E8F0073D002 /* FCModelCachedObject.m in Sources */ = {isa = PBXBuildFile; fileRef = 3885A25718DC9E8F0073D002 /* FCModelCachedObject.m */; };
-		3885A25C18DC9E8F0073D002 /* FCModelDatabaseQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = 3885A25918DC9E8F0073D002 /* FCModelDatabaseQueue.m */; };
 		3885A25F18DCAA780073D002 /* ZHFMember.m in Sources */ = {isa = PBXBuildFile; fileRef = 3885A25E18DCAA780073D002 /* ZHFMember.m */; };
 		68DA3A80EF90418FAA0727A1 /* libPods.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5E40ACC83C7845119F3752AF /* libPods.a */; };
 		8864595542544FAB86DFB1D0 /* libPods-test.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D9C54DD1CD6744A59A9508DF /* libPods-test.a */; };
@@ -44,6 +43,8 @@
 
 /* Begin PBXFileReference section */
 		36CB1F7E871B4BD9890055DE /* Pods.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Pods.xcconfig; path = Pods/Pods.xcconfig; sourceTree = "<group>"; };
+		384025E318DCB306008FCA6B /* FMDatabaseQueue+Private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "FMDatabaseQueue+Private.h"; sourceTree = "<group>"; };
+		384025E418DCB306008FCA6B /* FMDatabaseQueue+Private.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "FMDatabaseQueue+Private.m"; sourceTree = "<group>"; };
 		3885A1FE18DC81E40073D002 /* FMDBTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FMDBTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3885A20118DC81E40073D002 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		3885A20318DC81E40073D002 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
@@ -71,10 +72,6 @@
 		3885A24618DC91690073D002 /* ZHFFMDBQueue.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ZHFFMDBQueue.m; sourceTree = "<group>"; };
 		3885A25418DC9E8F0073D002 /* FCModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCModel.h; sourceTree = "<group>"; };
 		3885A25518DC9E8F0073D002 /* FCModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FCModel.m; sourceTree = "<group>"; };
-		3885A25618DC9E8F0073D002 /* FCModelCachedObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCModelCachedObject.h; sourceTree = "<group>"; };
-		3885A25718DC9E8F0073D002 /* FCModelCachedObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FCModelCachedObject.m; sourceTree = "<group>"; };
-		3885A25818DC9E8F0073D002 /* FCModelDatabaseQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCModelDatabaseQueue.h; sourceTree = "<group>"; };
-		3885A25918DC9E8F0073D002 /* FCModelDatabaseQueue.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FCModelDatabaseQueue.m; sourceTree = "<group>"; };
 		3885A25D18DCAA780073D002 /* ZHFMember.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ZHFMember.h; sourceTree = "<group>"; };
 		3885A25E18DCAA780073D002 /* ZHFMember.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ZHFMember.m; sourceTree = "<group>"; };
 		5E40ACC83C7845119F3752AF /* libPods.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libPods.a; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -198,6 +195,8 @@
 				3885A25E18DCAA780073D002 /* ZHFMember.m */,
 				3885A24518DC91690073D002 /* ZHFFMDBQueue.h */,
 				3885A24618DC91690073D002 /* ZHFFMDBQueue.m */,
+				384025E318DCB306008FCA6B /* FMDatabaseQueue+Private.h */,
+				384025E418DCB306008FCA6B /* FMDatabaseQueue+Private.m */,
 			);
 			name = Model;
 			sourceTree = "<group>";
@@ -207,10 +206,6 @@
 			children = (
 				3885A25418DC9E8F0073D002 /* FCModel.h */,
 				3885A25518DC9E8F0073D002 /* FCModel.m */,
-				3885A25618DC9E8F0073D002 /* FCModelCachedObject.h */,
-				3885A25718DC9E8F0073D002 /* FCModelCachedObject.m */,
-				3885A25818DC9E8F0073D002 /* FCModelDatabaseQueue.h */,
-				3885A25918DC9E8F0073D002 /* FCModelDatabaseQueue.m */,
 			);
 			path = FCModel;
 			sourceTree = "<group>";
@@ -381,14 +376,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				3885A20E18DC81E40073D002 /* main.m in Sources */,
-				3885A25B18DC9E8F0073D002 /* FCModelCachedObject.m in Sources */,
+				384025E518DCB306008FCA6B /* FMDatabaseQueue+Private.m in Sources */,
 				3885A25A18DC9E8F0073D002 /* FCModel.m in Sources */,
 				3885A24718DC91690073D002 /* ZHFFMDBQueue.m in Sources */,
 				3885A25F18DCAA780073D002 /* ZHFMember.m in Sources */,
 				3885A21818DC81E40073D002 /* ZHFViewController.m in Sources */,
 				3885A24318DC8EAB0073D002 /* ZHFCollection.m in Sources */,
 				3885A23C18DC8D8A0073D002 /* ZHFFileManager.m in Sources */,
-				3885A25C18DC9E8F0073D002 /* FCModelDatabaseQueue.m in Sources */,
 				3885A21218DC81E40073D002 /* ZHFAppDelegate.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
