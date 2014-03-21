@@ -91,7 +91,7 @@
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                         <subviews>
                             <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="44" sectionHeaderHeight="22" sectionFooterHeight="22" translatesAutoresizingMaskIntoConstraints="NO" id="ZSO-HV-NTq">
-                                <rect key="frame" x="0.0" y="0.0" width="320" height="504"/>
+                                <rect key="frame" x="0.0" y="0.0" width="320" height="464"/>
                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                                 <prototypes>
@@ -109,12 +109,28 @@
                                     <outlet property="delegate" destination="qCE-7W-EAQ" id="QEH-ta-cM9"/>
                                 </connections>
                             </tableView>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="gWo-MY-LkN">
+                                <rect key="frame" x="254" y="469" width="46" height="30"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="46" id="pTr-m2-sqE"/>
+                                    <constraint firstAttribute="height" constant="30" id="vQQ-45-zPG"/>
+                                </constraints>
+                                <state key="normal" title="Edit">
+                                    <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                </state>
+                                <connections>
+                                    <action selector="editTapped:" destination="qCE-7W-EAQ" eventType="touchUpInside" id="r1y-9e-voo"/>
+                                </connections>
+                            </button>
                         </subviews>
-                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
+                        <color key="backgroundColor" white="0.95000000000000007" alpha="1" colorSpace="calibratedWhite"/>
                         <constraints>
                             <constraint firstItem="ZSO-HV-NTq" firstAttribute="top" secondItem="nUf-WD-uPH" secondAttribute="top" id="1VL-ou-pAO"/>
                             <constraint firstAttribute="trailing" secondItem="ZSO-HV-NTq" secondAttribute="trailing" id="56c-hQ-iOj"/>
-                            <constraint firstAttribute="bottom" secondItem="ZSO-HV-NTq" secondAttribute="bottom" id="EEz-Re-9Ba"/>
+                            <constraint firstAttribute="bottom" secondItem="ZSO-HV-NTq" secondAttribute="bottom" constant="40" id="EEz-Re-9Ba"/>
+                            <constraint firstAttribute="bottom" secondItem="gWo-MY-LkN" secondAttribute="bottom" constant="5" id="T8A-d9-MBd"/>
+                            <constraint firstAttribute="trailing" secondItem="gWo-MY-LkN" secondAttribute="trailing" constant="20" id="UIo-rh-cRe"/>
                             <constraint firstItem="ZSO-HV-NTq" firstAttribute="leading" secondItem="nUf-WD-uPH" secondAttribute="leading" id="Wky-vH-0d8"/>
                         </constraints>
                     </view>

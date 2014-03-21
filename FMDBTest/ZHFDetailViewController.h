@@ -15,5 +15,6 @@
 
 @property (weak, nonatomic) IBOutlet UITableView *tableView;
 
+- (IBAction)editTapped:(id)sender;
 - (IBAction)newMemberTapped:(id)sender;
 @end

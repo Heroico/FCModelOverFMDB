@@ -22,6 +22,15 @@
     self.collections = [ZHFCollection allInstances];
 }
 
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+    
+    NSIndexPath *selected = [self.tableview indexPathForSelectedRow];
+    if (selected) {
+        [self.tableview deselectRowAtIndexPath:selected animated:NO];
+    }
+}
+
 - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
     if ([segue.identifier isEqualToString:@"CollectionToMemberSegueIdentifier"]) {
         NSIndexPath *selected = [self.tableview indexPathForSelectedRow];

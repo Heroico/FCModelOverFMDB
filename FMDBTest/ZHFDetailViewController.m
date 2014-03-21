@@ -48,6 +48,10 @@
 
 #pragma mark - UIInteraction
 
+- (IBAction)editTapped:(id)sender {
+    self.tableView.editing = !self.tableView.editing;
+}
+
 - (IBAction)newMemberTapped:(id)sender {
     PSPDFAlertView *alertView = [[PSPDFAlertView alloc] initWithTitle:@"New Member name"];
     alertView.alertViewStyle = UIAlertViewStylePlainTextInput;
