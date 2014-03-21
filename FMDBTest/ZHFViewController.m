@@ -7,23 +7,34 @@
 //
 
 #import "ZHFViewController.h"
+#import "ZHFCollection.h"
 
-@interface ZHFViewController ()
-
+@interface ZHFViewController ()<UITableViewDataSource, UITableViewDelegate>
+@property (nonatomic, retain) NSArray *collections;
 @end
 
 @implementation ZHFViewController
 
-- (void)viewDidLoad
-{
-    [super viewDidLoad];
-	// Do any additional setup after loading the view, typically from a nib.
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    self.collections = [ZHFCollection allInstances];
 }
 
-- (void)didReceiveMemoryWarning
-{
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
+#pragma mark - UITableView delegate
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return self.collections.count;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    ZHFCollection *collection = self.collections[indexPath.row];
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"CollectionCell"];
+    cell.textLabel.text = collection.name;
+    return cell;
 }
 
 @end
